@@ -237,7 +237,7 @@ class _MyAppState extends State<MyApp> {
           appBar: AppBar(
             title: const Text('OpenTok SDK'),
           ),
-          backgroundColor: Colors.black,
+          backgroundColor: Colors.white,
           body: Center(
               child: Stack(
             children: <Widget>[_viewRows(), _panel(), _toolbar()],

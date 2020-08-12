@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Color
 import android.opengl.GLSurfaceView
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -19,7 +18,7 @@ class FlutterOpenTokView(
         registrar: PluginRegistry.Registrar,
         var context: Context,
         var viewId: Int,
-        args: Any?) : PlatformView, View.OnTouchListener {
+        args: Any?) : PlatformView {
 
     private var delegate: VoIPProviderDelegate? = null
     private val openTokView: FrameLayout
@@ -119,22 +118,29 @@ class FlutterOpenTokView(
             openTokView.removeAllViews()
         }
 
-        if (subscriberView != null) {
+        if (subscriberView != null && (publisherView == null || provider?.isAudioOnly == true)) {
             val subView: View = subscriberView!!
             openTokView.addView(subView)
-
+            val layout = FrameLayout.LayoutParams(openTokView.measuredWidth, openTokView.measuredHeight, Gravity.TOP)
+            subView.layoutParams = layout
             if (subView is GLSurfaceView) {
                 (subView as GLSurfaceView).setZOrderOnTop(true)
             }
         }
 
         if (provider?.isAudioOnly == false && publisherView != null && subscriberView != null) {
+            val subView: View = subscriberView!!
+            openTokView.addView(subView)
+            val subLayout = FrameLayout.LayoutParams(openTokView.measuredWidth, openTokView.measuredHeight / 2, Gravity.TOP)
+            subView.layoutParams = subLayout
+            if (subView is GLSurfaceView) {
+                (subView as GLSurfaceView).setZOrderOnTop(true)
+            }
+
             val pubView: View = publisherView!!
             openTokView.addView(pubView)
-            pubView.setOnTouchListener(this)
-            val layout = FrameLayout.LayoutParams(publisherWidth, publisherHeight, Gravity.TOP or Gravity.RIGHT)
-            layout.setMargins(0,0,0,0)
-            pubView.layoutParams = layout
+            val pubLayout = FrameLayout.LayoutParams(openTokView.measuredWidth, openTokView.measuredHeight / 2, Gravity.BOTTOM)
+            pubView.layoutParams = pubLayout
             if (pubView is GLSurfaceView) {
                 (pubView as GLSurfaceView).setZOrderOnTop(true)
             }
@@ -143,48 +149,11 @@ class FlutterOpenTokView(
         if (publisherView != null && subscriberView == null) {
             val pubView: View = publisherView!!
             openTokView.addView(pubView)
-            pubView.setOnTouchListener(null)
-
-            val layout = FrameLayout.LayoutParams(screenWidth, screenWidth, Gravity.TOP or Gravity.LEFT)
-            layout.setMargins(20,20,20,20)
+            val layout = FrameLayout.LayoutParams(openTokView.measuredWidth, openTokView.measuredHeight, Gravity.TOP)
             pubView.layoutParams = layout
-
             if (pubView is GLSurfaceView) {
                 (pubView as GLSurfaceView).setZOrderOnTop(true)
             }
         }
-    }
-
-    /// TouchListener
-    var dX: Float = 0F
-    var dY: Float = 0F
-    override fun onTouch(view: View?, event: MotionEvent?): Boolean {
-        when (event!!.action) {
-            MotionEvent.ACTION_DOWN -> {
-                dX = view!!.x - event.rawX
-                dY = view.y - event.rawY
-            }
-            MotionEvent.ACTION_MOVE -> {
-                var newX = event.rawX + dX
-                if (newX < 0)
-                    newX = 0F
-                if (newX > openTokView.width - view!!.width)
-                    newX = (openTokView.width - view!!.width).toFloat()
-
-                var newY = event.rawY + dY
-                if (newY < 0)
-                    newY = 0F
-                if (newY > openTokView.height - view!!.height)
-                    newY = (openTokView.height - view!!.height).toFloat()
-
-                view!!.animate()
-                        .x(newX)
-                        .y(newY)
-                        .setDuration(0)
-                        .start()
-            }
-            else -> return false
-        }
-        return true
     }
 }
