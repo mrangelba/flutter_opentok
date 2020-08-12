@@ -10,33 +10,31 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import com.opentok.android.AudioDeviceManager
 import com.opentok.android.BaseAudioDevice
-import io.flutter.plugin.common.MethodCall
-import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.platform.PlatformView
 import kotlinx.serialization.json.Json
 
-
 class FlutterOpenTokView(
-        var registrar: PluginRegistry.Registrar,
-        override var context: Context,
+        registrar: PluginRegistry.Registrar,
+        var context: Context,
         var viewId: Int,
-        var args: Any?) : PlatformView, MethodChannel.MethodCallHandler, VoIPProviderDelegate, View.OnTouchListener {
+        args: Any?) : PlatformView, View.OnTouchListener {
 
+    private var delegate: VoIPProviderDelegate? = null
+    private val openTokView: FrameLayout
+
+    var methodCallHandler: MethodCallHandlerImpl? = null
     var publisherSettings: PublisherSettings? = null
     var switchedToSpeaker: Boolean = true
     var provider: VoIPProvider? = null
-    var channel: MethodChannel
-    val openTokView: FrameLayout
     var screenHeight: Int = LinearLayout.LayoutParams.MATCH_PARENT
     var screenWidth: Int = LinearLayout.LayoutParams.MATCH_PARENT
     var publisherHeight: Int = 500
     var publisherWidth: Int = 350
+    var messenger: BinaryMessenger = registrar.messenger()
 
     init {
-        val channelName = "plugins.indoor.solutions/opentok_$viewId"
-        channel = MethodChannel(registrar.messenger(), channelName)
-
         val arguments: Map<*, *>? = args as? Map<*, *>
         if (arguments?.containsKey("height") == true)
             screenHeight = arguments?.get("height") as Int
@@ -64,15 +62,15 @@ class FlutterOpenTokView(
         if (FlutterOpentokPlugin.loggingEnabled) {
             print("[FlutterOpenTokViewController] initialized")
         }
-
     }
 
     fun setup() {
+        methodCallHandler = MethodCallHandlerImpl(viewId, messenger, this)
+
+        delegate = VoIPProviderDelegateImpl(context, this, methodCallHandler!!)
+
         // Create VoIP provider
         createProvider()
-
-        // Listen for method calls from Dart.
-        channel.setMethodCallHandler(this)
     }
 
     override fun getView(): View {
@@ -90,112 +88,33 @@ class FlutterOpenTokView(
         }
 
         if (switchedToSpeaker) {
-            AudioDeviceManager.getAudioDevice().setOutputMode(BaseAudioDevice.OutputMode.SpeakerPhone);
+            AudioDeviceManager.getAudioDevice().setOutputMode(BaseAudioDevice.OutputMode.SpeakerPhone)
         } else {
-            AudioDeviceManager.getAudioDevice().setOutputMode(BaseAudioDevice.OutputMode.Handset);
+            AudioDeviceManager.getAudioDevice().setOutputMode(BaseAudioDevice.OutputMode.Handset)
         }
     }
 
     // Convenience getter for current video view based on provider implementation
     val subscriberView: View?
         get() {
-            if (provider is OpenTokVoIPImpl)
-                return (provider as OpenTokVoIPImpl).subscriberView
+            if (provider is VoIPProviderImpl)
+                return (provider as VoIPProviderImpl).subscriberView
             return null
         }
 
     val publisherView: View?
         get() {
-            if (provider is OpenTokVoIPImpl)
-                return (provider as OpenTokVoIPImpl).publisherView
+            if (provider is VoIPProviderImpl)
+                return (provider as VoIPProviderImpl).publisherView
             return null
         }
 
     /** Create an instance of VoIPProvider. This is what implements VoIP for the application.*/
     private fun createProvider() {
-        provider = OpenTokVoIPImpl(delegate = this, publisherSettings = publisherSettings)
+        provider = VoIPProviderImpl(delegate, publisherSettings)
     }
 
-    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-        if (call.method == "create") {
-            if (call.arguments == null) return
-
-            val methodArgs = call.arguments as? Map<String, Any>
-            val apiKey = methodArgs?.get("apiKey") as? String
-            val sessionId = methodArgs?.get("sessionId") as? String
-            val token = methodArgs?.get("token") as? String
-
-            if (apiKey != null && sessionId != null && token != null) {
-                provider?.connect(apiKey, sessionId, token)
-                result.success(null)
-            } else {
-                result.error("CREATE_ERROR", "Android could not extract flutter arguments in method: (create)","")
-            }
-        } else if (call.method == "destroy") {
-            provider?.disconnect()
-            result.success(null)
-        } else if (call.method == "enablePublisherVideo") {
-            provider?.enablePublisherVideo()
-            refreshViews()
-            result.success(null)
-        } else if (call.method == "disablePublisherVideo") {
-            provider?.disablePublisherVideo()
-            refreshViews()
-            result.success(null)
-        } else if (call.method == "unmutePublisherAudio") {
-            provider?.unmutePublisherAudio()
-            result.success(null)
-        } else if (call.method == "mutePublisherAudio") {
-            provider?.mutePublisherAudio()
-            result.success(null)
-        } else if (call.method == "muteSubscriberAudio") {
-            provider?.muteSubscriberAudio()
-            result.success(null)
-        } else if (call.method == "unmuteSubscriberAudio") {
-            provider?.unmuteSubscriberAudio()
-            result.success(null)
-        } else if (call.method == "switchAudioToSpeaker") {
-            switchedToSpeaker = true
-            configureAudioSession()
-            result.success(null)
-        } else if (call.method == "switchAudioToReceiver") {
-            switchedToSpeaker = false
-            configureAudioSession()
-            result.success(null)
-        } else if (call.method == "getSdkVersion") {
-            result.success("1")
-        } else if (call.method == "switchCamera") {
-            provider?.switchCamera()
-            result.success(null)
-        } else {
-            result.notImplemented()
-        }
-    }
-
-    fun channelInvokeMethod(method: String, arguments: Any?) {
-        channel.invokeMethod(method, arguments, object: MethodChannel.Result {
-            override fun notImplemented() {
-                if (FlutterOpentokPlugin.loggingEnabled) {
-                    print ("Method $method is not implemented")
-                }
-            }
-
-            override fun error(errorCode: String?, errorMessage: String?, errorDetails: Any?) {
-                if (FlutterOpentokPlugin.loggingEnabled) {
-                    print ("Method $method failed with error $errorMessage")
-                }
-            }
-
-            override fun success(result: Any?) {
-                if (FlutterOpentokPlugin.loggingEnabled) {
-                    print ("Method $method succeeded")
-                }
-            }
-
-        })
-    }
-
-    private fun refreshViews() {
+    fun refreshViews() {
         if (openTokView.childCount > 0) {
             openTokView.removeAllViews()
         }
@@ -212,7 +131,7 @@ class FlutterOpenTokView(
         if (provider?.isAudioOnly == false && publisherView != null && subscriberView != null) {
             val pubView: View = publisherView!!
             openTokView.addView(pubView)
-            pubView.setOnTouchListener(this);
+            pubView.setOnTouchListener(this)
             val layout = FrameLayout.LayoutParams(publisherWidth, publisherHeight, Gravity.TOP or Gravity.RIGHT)
             layout.setMargins(0,0,0,0)
             pubView.layoutParams = layout
@@ -234,44 +153,6 @@ class FlutterOpenTokView(
                 (pubView as GLSurfaceView).setZOrderOnTop(true)
             }
         }
-    }
-
-    /// VoIPProviderDelegate
-
-    override fun willConnect() {
-        channelInvokeMethod("onWillConnect", null)
-    }
-
-    override fun didConnect() {
-        configureAudioSession()
-        refreshViews()
-        channelInvokeMethod("onSessionConnect", null)
-    }
-
-    override fun didDisconnect() {
-        channelInvokeMethod("onSessionDisconnect", null)
-    }
-
-    override fun didReceiveVideo() {
-        if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[FlutterOpenTokView] Receive video")
-        }
-        refreshViews()
-        channelInvokeMethod("onReceiveVideo", null)
-    }
-
-    override fun didCreateStream() {
-        channelInvokeMethod("onCreateStream",null)
-    }
-
-    override fun didCreatePublisherStream() {
-        channelInvokeMethod("onCreatePublisherStream", null)
-    }
-
-    override fun didDropStream() {
-        channelInvokeMethod("onDroppedStream", null)
-
-        refreshViews()
     }
 
     /// TouchListener
