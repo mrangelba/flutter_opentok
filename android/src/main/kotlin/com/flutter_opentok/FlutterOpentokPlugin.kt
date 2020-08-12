@@ -7,7 +7,7 @@ import io.flutter.plugin.common.PluginRegistry.Registrar
 class FlutterOpentokPlugin : MethodChannel.MethodCallHandler {
 
   companion object {
-    var loggingEnabled = false
+    var loggingEnabled = true
 
     @JvmStatic
     fun registerWith(registrar: Registrar) {

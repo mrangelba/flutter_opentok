@@ -1,5 +1,6 @@
 package com.flutter_opentok
 
+import android.util.Log
 import android.content.Context
 import android.view.View
 import com.opentok.android.*
@@ -15,7 +16,6 @@ interface VoIPProviderDelegate {
 
     val context: Context
 }
-
 
 interface VoIPProvider {
     /// Whether VoIP connection has been established.
@@ -85,10 +85,10 @@ class OpenTokVoIPImpl(
         delegate?.willConnect()
 
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[OpenTokVoIPImpl] Create OTSession")
-            print("[OpenTokVoIPImpl] API key: $apiKey")
-            print("[OpenTokVoIPImpl] Session ID: $sessionId")
-            print("[OpenTokVoIPImpl] Token: $token")
+            Log.d("[VOIPProvider]", "[OpenTokVoIPImpl] Create OTSession")
+            Log.d("[VOIPProvider]", "[OpenTokVoIPImpl] API key: $apiKey")
+            Log.d("[VOIPProvider]", "[OpenTokVoIPImpl] Session ID: $sessionId")
+            Log.d("[VOIPProvider]", "[OpenTokVoIPImpl] Token: $token")
         }
 
         if (apiKey == "" || sessionId == "" || token == "") {
@@ -102,7 +102,7 @@ class OpenTokVoIPImpl(
 
     override fun disconnect() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("Disconnecting from session")
+            Log.d("[VOIPProvider]", "Disconnecting from session")
         }
 
         session?.disconnect()
@@ -110,7 +110,7 @@ class OpenTokVoIPImpl(
 
     override fun mutePublisherAudio() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("Mute publisher audio")
+            Log.d("[VOIPProvider]", "Mute publisher audio")
         }
 
         publisher?.publishAudio = false
@@ -118,7 +118,7 @@ class OpenTokVoIPImpl(
 
     override fun unmutePublisherAudio() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("UnMute publisher audio")
+            Log.d("[VOIPProvider]", "UnMute publisher audio")
         }
 
         publisher?.publishAudio = true
@@ -126,7 +126,7 @@ class OpenTokVoIPImpl(
 
     override fun muteSubscriberAudio() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("Mute subscriber audio")
+            Log.d("[VOIPProvider]", "Mute subscriber audio")
         }
 
         subscriber?.subscribeToAudio = false
@@ -134,7 +134,7 @@ class OpenTokVoIPImpl(
 
     override fun unmuteSubscriberAudio() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("UnMute subscriber audio")
+            Log.d("[VOIPProvider]", "UnMute subscriber audio")
         }
 
         subscriber?.subscribeToAudio = true
@@ -142,7 +142,7 @@ class OpenTokVoIPImpl(
 
     override fun enablePublisherVideo() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("Enable publisher video")
+            Log.d("[VOIPProvider]", "Enable publisher video")
         }
 
         publisher?.publishVideo = true
@@ -150,7 +150,7 @@ class OpenTokVoIPImpl(
 
     override fun disablePublisherVideo() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("Disable publisher video")
+            Log.d("[VOIPProvider]", "Disable publisher video")
         }
 
         publisher?.publishVideo = false
@@ -158,7 +158,7 @@ class OpenTokVoIPImpl(
 
     override fun switchCamera() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("Switch Camera")
+            Log.d("[VOIPProvider]", "Switch Camera")
         }
 
         publisher?.cycleCamera()
@@ -167,7 +167,7 @@ class OpenTokVoIPImpl(
     /// SessionListener
     override fun onConnected(session: Session?) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[SessionListener] onConnected")
+            Log.d("[VOIPProvider]", "[SessionListener] onConnected")
         }
         publish()
         delegate?.didConnect()
@@ -175,7 +175,7 @@ class OpenTokVoIPImpl(
 
     override fun onDisconnected(session: Session?) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[SessionListener] onDisconnected")
+            Log.d("[VOIPProvider]", "[SessionListener] onDisconnected")
         }
 
         unsubscribe()
@@ -188,7 +188,7 @@ class OpenTokVoIPImpl(
 
     override fun onStreamDropped(session: Session?, stream: Stream?) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[SessionListener] onStreamDropped")
+            Log.d("[VOIPProvider]", "[SessionListener] onStreamDropped")
         }
         unsubscribe()
         delegate?.didDropStream()
@@ -196,7 +196,7 @@ class OpenTokVoIPImpl(
 
     override fun onStreamReceived(session: Session?, stream: Stream?) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[SessionListener] onStreamReceived")
+            Log.d("[VOIPProvider]", "[SessionListener] onStreamReceived")
         }
         stream?.let { subscribe(it) }
         delegate?.didCreateStream()
@@ -207,7 +207,7 @@ class OpenTokVoIPImpl(
 
     override fun onError(session: Session?, error: OpentokError?) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[SessionListener] onError ${error?.message}")
+            Log.d("[VOIPProvider]", "[SessionListener] onError ${error?.message}")
         }
     }
 
@@ -215,21 +215,21 @@ class OpenTokVoIPImpl(
 
     override fun onStreamCreated(p0: PublisherKit?, p1: Stream?) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[PublisherListener] onStreamCreated")
+            Log.d("[VOIPProvider]", "[PublisherListener] onStreamCreated")
         }
         delegate?.didCreatePublisherStream()
     }
 
     override fun onStreamDestroyed(p0: PublisherKit?, p1: Stream?) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[PublisherListener] onStreamDestroyed")
+            Log.d("[VOIPProvider]", "[PublisherListener] onStreamDestroyed")
         }
         unpublish()
     }
 
     override fun onError(p0: PublisherKit?, error: OpentokError?) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[PublisherListener] onError ${error?.message}")
+            Log.d("[VOIPProvider]", "[PublisherListener] onError ${error?.message}")
         }
     }
 
@@ -237,7 +237,7 @@ class OpenTokVoIPImpl(
 
     fun publish() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[VOIPProvider] publish")
+            Log.d("[VOIPProvider]", "[VOIPProvider] publish")
         }
 
         publisher = Publisher.Builder(delegate?.context)
@@ -255,7 +255,7 @@ class OpenTokVoIPImpl(
 
     fun unpublish() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[VOIPProvider] unpublish")
+            Log.d("[VOIPProvider]", "[VOIPProvider] unpublish")
         }
         if (publisher != null) {
             session?.unpublish(publisher)
@@ -265,7 +265,7 @@ class OpenTokVoIPImpl(
 
     fun subscribe(stream: Stream) {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[VOIPProvider] subscribe")
+            Log.d("[VOIPProvider]", "[VOIPProvider] subscribe")
         }
 
         subscriber = Subscriber.Builder(delegate?.context, stream).build()
@@ -274,14 +274,12 @@ class OpenTokVoIPImpl(
 
     fun unsubscribe() {
         if (FlutterOpentokPlugin.loggingEnabled) {
-            print("[VOIPProvider] unsubscribe")
+            Log.d("[VOIPProvider]", " unsubscribe")
         }
 
         if (subscriber != null) {
-            session?.unsubscribe(subscriber)
             subscriber = null
         }
-
 
     }
 }

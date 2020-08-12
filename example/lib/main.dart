@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_opentok/flutter_opentok.dart';
 import 'package:flutter_opentok_example/video_session.dart';
 import 'package:flutter_opentok_example/settings.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() => runApp(MyApp());
 
@@ -31,7 +32,15 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  void initialize() {
+  void initialize() async {
+    if (await Permission.camera.request().isGranted) {
+      print('Permission Camera');
+    }
+
+    if (await Permission.microphone.request().isGranted) {
+      print('Permission Microphone');
+    }
+
     if (API_KEY.isEmpty) {
       setState(() {
         _infoStrings.add(
@@ -84,7 +93,7 @@ class _MyAppState extends State<MyApp> {
               ),
               shape: CircleBorder(),
               elevation: 2.0,
-              fillColor: muted ? Colors.blueAccent : Colors.white,
+              fillColor: publishVideo ? Colors.blueAccent : Colors.white,
               padding: const EdgeInsets.all(12.0),
             ),
             RawMaterialButton(
@@ -123,9 +132,7 @@ class _MyAppState extends State<MyApp> {
   Widget _viewRows() {
     List<Widget> views = _getRenderViews();
     if (views.isNotEmpty) {
-      return Container (
-        child: Expanded(child: views[0]),
-      );
+      return Positioned.fill(child: views[0]);
     }
 
     return Container();

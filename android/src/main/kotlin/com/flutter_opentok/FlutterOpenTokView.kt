@@ -209,13 +209,27 @@ class FlutterOpenTokView(
             }
         }
 
-        if (provider?.isAudioOnly == false && publisherView != null) {
+        if (provider?.isAudioOnly == false && publisherView != null && subscriberView != null) {
             val pubView: View = publisherView!!
             openTokView.addView(pubView)
             pubView.setOnTouchListener(this);
             val layout = FrameLayout.LayoutParams(publisherWidth, publisherHeight, Gravity.TOP or Gravity.RIGHT)
+            layout.setMargins(0,0,0,0)
+            pubView.layoutParams = layout
+            if (pubView is GLSurfaceView) {
+                (pubView as GLSurfaceView).setZOrderOnTop(true)
+            }
+        }
+
+        if (publisherView != null && subscriberView == null) {
+            val pubView: View = publisherView!!
+            openTokView.addView(pubView)
+            pubView.setOnTouchListener(null)
+
+            val layout = FrameLayout.LayoutParams(screenWidth, screenWidth, Gravity.TOP or Gravity.LEFT)
             layout.setMargins(20,20,20,20)
             pubView.layoutParams = layout
+
             if (pubView is GLSurfaceView) {
                 (pubView as GLSurfaceView).setZOrderOnTop(true)
             }
@@ -256,6 +270,8 @@ class FlutterOpenTokView(
 
     override fun didDropStream() {
         channelInvokeMethod("onDroppedStream", null)
+
+        refreshViews()
     }
 
     /// TouchListener
